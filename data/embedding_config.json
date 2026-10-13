@@ -1,0 +1,6 @@
+{
+  "model_name": "BAAI/bge-small-en-v1.5",
+  "embedding_dim": 384,
+  "normalize_embeddings": true,
+  "similarity": "cosine (via inner product on normalized vectors)"
+}
