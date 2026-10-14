@@ -5,8 +5,8 @@ Endpoints:
   GET  /health  - liveness check (no model calls, just confirms the app is up)
   POST /ask     - main endpoint: question in, grounded answer + citations out
 
-Imports embeddings.py, retrieval.py, generation.py, config.py from src/ directly -
-SAME code as Colab, no duplication (Phase 5 requirement).
+Imports embeddings.py, retrieval.py, generation.py, config.py, cache.py from src/
+directly - SAME code as Colab, no duplication (Phase 5 requirement).
 """
 
 import os
@@ -28,6 +28,7 @@ import config
 import embeddings
 import retrieval
 import generation
+import cache
 
 
 app = FastAPI(title=config.API_TITLE, version=config.API_VERSION)
@@ -55,12 +56,14 @@ class AskResponse(BaseModel):
     cited_articles: list[str]
     retrieved_chunks: list[RetrievedChunk]
     latency_seconds: float
+    cache_hit: bool = False
 
 
 class HealthResponse(BaseModel):
     status: str
     embedding_backend: str
     strategy: str
+    cache_enabled: bool
 
 
 class ErrorResponse(BaseModel):
@@ -91,7 +94,11 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 def startup_validation():
     config.validate_config()
-    print("Startup validation passed. Backend=" + config.EMBEDDING_BACKEND + ", Strategy=" + config.DEFAULT_STRATEGY)
+    print(
+        "Startup validation passed. Backend=" + config.EMBEDDING_BACKEND
+        + ", Strategy=" + config.DEFAULT_STRATEGY
+        + ", CacheEnabled=" + str(config.CACHE_ENABLED)
+    )
 
 
 # ============================================================
@@ -104,6 +111,7 @@ def health():
         status="ok",
         embedding_backend=config.EMBEDDING_BACKEND,
         strategy=config.DEFAULT_STRATEGY,
+        cache_enabled=config.CACHE_ENABLED,
     )
 
 
@@ -111,6 +119,20 @@ def health():
 def ask(request: AskRequest):
     start_time = time.time()
 
+    # --- Cache check first: skip the ~17-25s Gemini call entirely on a hit ---
+    cached = cache.get_cached_answer(request.query, top_k=request.top_k)
+    if cached is not None:
+        latency = time.time() - start_time
+        return AskResponse(
+            query=cached["query"],
+            answer=cached["answer"],
+            cited_articles=cached["cited_articles"],
+            retrieved_chunks=[RetrievedChunk(**c) for c in cached["retrieved_chunks"]],
+            latency_seconds=round(latency, 2),
+            cache_hit=True,
+        )
+
+    # --- Cache miss: run the full pipeline as before ---
     query_vector = embeddings.embed_query(request.query)
     retrieved_chunks = retrieval.retrieve(
         query_vector,
@@ -121,7 +143,7 @@ def ask(request: AskRequest):
 
     latency = time.time() - start_time
 
-    return AskResponse(
+    response = AskResponse(
         query=result["query"],
         answer=result["answer"],
         cited_articles=result["cited_articles"],
@@ -135,4 +157,14 @@ def ask(request: AskRequest):
             for c in retrieved_chunks
         ],
         latency_seconds=round(latency, 2),
+        cache_hit=False,
     )
+
+    # --- Write to cache for next time (failure here must not affect the response) ---
+    cache.set_cached_answer(
+        request.query,
+        top_k=request.top_k,
+        response=response.model_dump(exclude={"latency_seconds", "cache_hit"}),
+    )
+
+    return response

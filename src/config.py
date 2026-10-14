@@ -29,6 +29,14 @@ LLM_TIMEOUT_MS = 30000
 API_TITLE = "GDPR RAG API"
 API_VERSION = "1.0.0"
 
+# --- Phase 6: Caching layer config (Upstash Redis) ---
+# Cache is OPTIONAL by design: if these env vars are missing, caching is
+# silently disabled and the app still works (fail-open, never fail-closed).
+UPSTASH_REDIS_REST_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "")
+UPSTASH_REDIS_REST_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+CACHE_ENABLED = bool(UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN)
+CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", 30 * 24 * 60 * 60))  # 30 days default
+
 
 def validate_config():
     errors = []
@@ -43,6 +51,10 @@ def validate_config():
 
     if not os.path.exists(EMBEDDING_CONFIG_PATH):
         errors.append("embedding_config.json not found at: " + EMBEDDING_CONFIG_PATH)
+
+    # NOTE: Upstash vars are intentionally NOT validated as required here.
+    # Missing cache credentials should not block the app from starting -
+    # caching degrades gracefully to "disabled", not a startup crash.
 
     if errors:
         raise RuntimeError("Config validation FAILED:\n" + "\n".join("  - " + e for e in errors))
