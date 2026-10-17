@@ -38,6 +38,30 @@ CACHE_ENABLED = bool(UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN)
 CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", 30 * 24 * 60 * 60))  # 30 days default
 
 
+
+# ============================================================
+# PHASE 7 — Cost & Latency Tracking config
+# ============================================================
+
+# --- Gemini pricing ---
+# Verified against official source: https://ai.google.dev/gemini-api/docs/pricing
+# Checked: 2026-10-16. Model in use: gemini-3.1-flash-lite, Standard tier, Paid rates.
+GEMINI_INPUT_PRICE_PER_1M_USD = 0.25    # $ per 1M input tokens
+GEMINI_OUTPUT_PRICE_PER_1M_USD = 1.50   # $ per 1M output tokens
+
+# Confirmed by project owner on 2026-10-16: GEMINI_API_KEY is on
+# Google's FREE tier (no billing account linked). Real spend is $0
+# regardless of token volume. Flip to "paid" after linking billing —
+# cost_usd will then reflect real spend with no other code changes.
+GEMINI_PRICING_TIER = "free"  # "free" or "paid"
+
+# --- Tracking storage (reuses the Phase 6 Upstash Redis instance) ---
+TRACKING_LIST_KEY = "track:queries"
+TRACKING_MAX_RECORDS = 5000
+TRACKING_TRIM_EVERY_N = 50
+TRACKING_ENABLED = CACHE_ENABLED
+
+
 def validate_config():
     errors = []
 

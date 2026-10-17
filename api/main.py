@@ -29,6 +29,7 @@ import embeddings
 import retrieval
 import generation
 import cache
+import tracking
 
 
 app = FastAPI(title=config.API_TITLE, version=config.API_VERSION)
@@ -98,6 +99,7 @@ def startup_validation():
         "Startup validation passed. Backend=" + config.EMBEDDING_BACKEND
         + ", Strategy=" + config.DEFAULT_STRATEGY
         + ", CacheEnabled=" + str(config.CACHE_ENABLED)
+        + ", TrackingEnabled=" + str(config.TRACKING_ENABLED)
     )
 
 
@@ -120,9 +122,22 @@ def ask(request: AskRequest):
     start_time = time.time()
 
     # --- Cache check first: skip the ~17-25s Gemini call entirely on a hit ---
+    cache_check_start = time.time()
     cached = cache.get_cached_answer(request.query, top_k=request.top_k)
+    cache_check_ms = (time.time() - cache_check_start) * 1000
+
     if cached is not None:
         latency = time.time() - start_time
+        try:
+            tracking.record_query(
+                cache_hit=True,
+                timings_ms={
+                    "cache_check_ms": round(cache_check_ms, 2),
+                    "total_ms": round(latency * 1000, 2),
+                },
+            )
+        except Exception as e:
+            print(f"⚠️ Tracking call raised unexpectedly (ignored, response unaffected): {e}")
         return AskResponse(
             query=cached["query"],
             answer=cached["answer"],
@@ -133,13 +148,21 @@ def ask(request: AskRequest):
         )
 
     # --- Cache miss: run the full pipeline as before ---
+    embedding_start = time.time()
     query_vector = embeddings.embed_query(request.query)
+    embedding_ms = (time.time() - embedding_start) * 1000
+
+    retrieval_start = time.time()
     retrieved_chunks = retrieval.retrieve(
         query_vector,
         strategy=config.DEFAULT_STRATEGY,
         top_k=request.top_k,
     )
+    retrieval_ms = (time.time() - retrieval_start) * 1000
+
+    generation_start = time.time()
     result = generation.generate_answer(request.query, retrieved_chunks)
+    generation_ms = (time.time() - generation_start) * 1000
 
     latency = time.time() - start_time
 
@@ -166,5 +189,22 @@ def ask(request: AskRequest):
         top_k=request.top_k,
         response=response.model_dump(exclude={"latency_seconds", "cache_hit"}),
     )
+
+    # --- Record cost/latency for this query (failure here must not affect the response) ---
+    try:
+        tracking.record_query(
+            cache_hit=False,
+            timings_ms={
+                "cache_check_ms": round(cache_check_ms, 2),
+                "embedding_ms": round(embedding_ms, 2),
+                "retrieval_ms": round(retrieval_ms, 2),
+                "generation_ms": round(generation_ms, 2),
+                "total_ms": round(latency * 1000, 2),
+            },
+            prompt_tokens=result["prompt_tokens"],
+            output_tokens=result["output_tokens"],
+        )
+    except Exception as e:
+        print(f"⚠️ Tracking call raised unexpectedly (ignored, response unaffected): {e}")
 
     return response

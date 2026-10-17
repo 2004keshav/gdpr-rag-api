@@ -66,7 +66,13 @@ def call_llm(prompt, model=MODEL_NAME, max_retries=4):
                     http_options=types.HttpOptions(timeout=_REQUEST_TIMEOUT_MS)
                 ),
             )
-            return response.text
+            usage = getattr(response, "usage_metadata", None)
+            usage_dict = {
+                "prompt_tokens": (getattr(usage, "prompt_token_count", 0) or 0) if usage else 0,
+                "output_tokens": (getattr(usage, "candidates_token_count", 0) or 0) if usage else 0,
+                "total_tokens": (getattr(usage, "total_token_count", 0) or 0) if usage else 0,
+            }
+            return response.text, usage_dict
         except Exception as e:
             last_error = e
             wait_time = 2 ** attempt
@@ -101,7 +107,7 @@ def _build_prompt(query, retrieved_chunks):
 def generate_answer(query, retrieved_chunks, model=MODEL_NAME):
     """Generates a grounded answer from retrieved chunks."""
     prompt = _build_prompt(query, retrieved_chunks)
-    answer_text = call_llm(prompt, model=model)
+    answer_text, usage = call_llm(prompt, model=model)
 
     cited = re.findall(r"\[Article\s+([0-9]+)\]", answer_text)
     cited_articles = sorted(set(cited), key=lambda x: int(x))
@@ -111,4 +117,7 @@ def generate_answer(query, retrieved_chunks, model=MODEL_NAME):
         "answer": answer_text,
         "cited_articles": cited_articles,
         "retrieved_chunks": retrieved_chunks,
+        "prompt_tokens": usage["prompt_tokens"],
+        "output_tokens": usage["output_tokens"],
+        "total_tokens": usage["total_tokens"],
     }
