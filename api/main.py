@@ -21,6 +21,7 @@ if SRC_DIR not in sys.path:
     sys.path.append(SRC_DIR)
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -33,6 +34,15 @@ import tracking
 
 
 app = FastAPI(title=config.API_TITLE, version=config.API_VERSION)
+
+# CORS: allow browser-based frontends (e.g. Streamlit Community Cloud app) to call this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ASSUMPTION: open for now since this is a public read-only Q&A API; tighten later if needed
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 # ============================================================
