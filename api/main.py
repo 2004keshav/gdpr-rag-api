@@ -38,7 +38,7 @@ app = FastAPI(title=config.API_TITLE, version=config.API_VERSION)
 # CORS: allow browser-based frontends (e.g. Streamlit Community Cloud app) to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ASSUMPTION: open for now since this is a public read-only Q&A API; tighten later if needed
+    allow_origins=["https://gdpr-rag-api-zcxzo8b4nv3q7zxtgzpzzi.streamlit.app"],  # Tightened in Phase 8 once the Streamlit Cloud URL was known
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
