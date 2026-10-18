@@ -21,3 +21,28 @@ uvicorn main:app --reload
 Deployed on Render free tier. Required environment variables:
 - `GEMINI_API_KEY` (secret, set in Render dashboard)
 - `EMBEDDING_BACKEND=fastembed` (required - keeps RAM usage under the 512MB free-tier limit)
+
+## Live URLs
+- **API:** https://gdpr-rag-api.onrender.com (`/health`, `/ask`)
+- **Frontend:** https://gdpr-rag-api-zcxzo8b4nv3q7zxtgzpzzi.streamlit.app
+
+## Frontend
+A Streamlit chat UI lives in `frontend/` and calls the live API above. It includes:
+- A dropdown of the 27 golden evaluation questions (from Phase 4) for quick demoing
+- Grounded answers with `[Article X]` citations
+- A "served from cache" badge when a response comes from the Phase 6 cache
+- Handling for three distinct states: a slow/cold-starting backend, a genuinely down backend, and a valid abstention answer
+
+Deployed on Streamlit Community Cloud (free tier) from this same repo, main file path `frontend/app.py`.
+
+Run locally:
+```bash
+cd frontend
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+## CORS
+`api/main.py` restricts cross-origin requests to the deployed frontend's origin only
+(`https://gdpr-rag-api-zcxzo8b4nv3q7zxtgzpzzi.streamlit.app`). If you deploy your own
+copy of the frontend at a different URL, update `allow_origins` in `api/main.py` to match.
