@@ -1,0 +1,110 @@
+[
+  {
+    "id": 1,
+    "question": "What are the core principles relating to processing of personal data?"
+  },
+  {
+    "id": 2,
+    "question": "Under what conditions is processing of personal data considered lawful?"
+  },
+  {
+    "id": 3,
+    "question": "What conditions must be met for consent to be valid under GDPR?"
+  },
+  {
+    "id": 4,
+    "question": "What special categories of personal data are subject to extra protection?"
+  },
+  {
+    "id": 5,
+    "question": "What information must a controller provide when data is collected directly from the subject?"
+  },
+  {
+    "id": 6,
+    "question": "What information must a controller provide when data is NOT obtained directly from the subject?"
+  },
+  {
+    "id": 7,
+    "question": "What is the data subject's right of access to their personal data?"
+  },
+  {
+    "id": 8,
+    "question": "What is the right to rectification?"
+  },
+  {
+    "id": 9,
+    "question": "What is the \"right to be forgotten\" and when does it apply?"
+  },
+  {
+    "id": 10,
+    "question": "When can a data subject restrict the processing of their data?"
+  },
+  {
+    "id": 11,
+    "question": "What is the right to data portability?"
+  },
+  {
+    "id": 12,
+    "question": "Under what circumstances can a data subject object to processing?"
+  },
+  {
+    "id": 13,
+    "question": "What rights does a person have regarding automated decision-making and profiling?"
+  },
+  {
+    "id": 14,
+    "question": "What is the principle of data protection by design and by default?"
+  },
+  {
+    "id": 15,
+    "question": "What are the obligations of a data processor acting on behalf of a controller?"
+  },
+  {
+    "id": 16,
+    "question": "What security measures must controllers and processors implement?"
+  },
+  {
+    "id": 17,
+    "question": "When must a Data Protection Officer be designated?"
+  },
+  {
+    "id": 18,
+    "question": "What are the general conditions for imposing administrative fines?"
+  },
+  {
+    "id": 19,
+    "question": "What must happen when a personal data breach occurs \u2014 both to the authority and to the individual?"
+  },
+  {
+    "id": 20,
+    "question": "What rights does a data subject have over their own personal data (overview)?"
+  },
+  {
+    "id": 21,
+    "question": "What obligations does a controller have regarding both accountability and record-keeping?"
+  },
+  {
+    "id": 22,
+    "question": "What transparency obligations apply when collecting personal data, and what must be disclosed?"
+  },
+  {
+    "id": 23,
+    "question": "When is a Data Protection Impact Assessment required, and what rights can a subject exercise if they disagree with automated processing?"
+  },
+  {
+    "id": 24,
+    "question": "What is the minimum wage for data protection officers under GDPR?"
+  },
+  {
+    "id": 25,
+    "question": "How does GDPR regulate cryptocurrency mining operations?"
+  },
+  {
+    "id": 26,
+    "question": "What tax rate applies to companies that violate GDPR?"
+  },
+  {
+    "id": 27,
+    "question": "Does GDPR specify prison sentences for individual employees who leak data?"
+  }
+]
