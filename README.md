@@ -46,3 +46,13 @@ streamlit run app.py
 `api/main.py` restricts cross-origin requests to the deployed frontend's origin only
 (`https://gdpr-rag-api-zcxzo8b4nv3q7zxtgzpzzi.streamlit.app`). If you deploy your own
 copy of the frontend at a different URL, update `allow_origins` in `api/main.py` to match.
+
+## Phase 9: Failure Analysis
+
+A fine-grained, per-question re-analysis of the deployed configuration's results — going beyond the aggregate Phase 4 metrics (recall@5=1.000, faithfulness=0.997) — surfaced three distinct, evidenced findings that the aggregate scores hid:
+
+1. **Missing-evidence hallucination** (Generation tier) — a legally correct answer not traceable to retrieved context (Q9, Article 17).
+2. **Evaluation-metric blind spot, fixed** — the original relevance judge scored correct abstentions as 0.0 relevance. A rewritten, abstention-aware judge prompt was applied and verified: unanswerable-question relevance went from 0.000 → 1.000 on average, with negligible impact (1.000 → 0.983) on answerable-question scoring.
+3. **Adjacent-article ranking confusion, data-validated** (Retrieval tier) — 6/23 answerable questions had the gold article outranked by a substantively neighboring GDPR article (e.g., Art.13 vs Art.14, Art.37 vs Art.38), despite recall@5 staying perfect. Re-testing the previously-dropped reranker at the rank-1 level (not just recall@5) showed it resolves all 6 cases, with only 2 minor, answer-quality-neutral regressions elsewhere.
+
+Full writeup, methodology, and taxonomy citations: [`phase9_failure_analysis.md`](./phase9_failure_analysis.md)
