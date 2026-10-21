@@ -120,7 +120,13 @@ This directly confirms the hypothesis: the reranker was correctly judged to make
 
 **Honest caveat — checked for regressions elsewhere:** reranking the other 21 questions showed 0 improved, 15 unchanged, and **2 made worse** (Q2: Art.6 moved from rank 1 to rank 2; Q22: gold moved from rank 1 to rank 4). Both regressions were checked for downstream impact: in both cases recall@5 stayed at 1.0, citations stayed clean, and faithfulness stayed at 1.0 — the rank shift did not propagate into a worse generated answer. This is a real trade-off, not a free win, but it is a favorable one: 6 clear fixes against 2 benign rank shifts with no measured answer-quality cost.
 
-**Remaining step before deployment:** this analysis validates the reranker's *data-level* effect only. Actually reintroducing it into the production API (`src/retrieval.py`, currently `use_rerank=False` in the deployed config) is a pipeline change, not an analysis — it should be explicitly proposed, confirmed, and tested end-to-end (including latency impact, since Phase 7 established cold-start latency is already a known constraint) before being deployed, consistent with this project's change-control process.
+**Deployment investigated and found infeasible on the current free tier.** Reintroducing the reranker was investigated as an actual deployment, not just a data analysis. `src/retrieval.py`'s own code comment confirms the reranker was originally dropped *"for RAM savings"* — so before writing any deployment code, the full production stack's memory footprint was measured directly (in a clean environment, importing the exact same modules Render would import: `retrieval.py`, `embeddings.py`, `generation.py`, `cache.py`, `tracking.py`, plus FastAPI/uvicorn).
+
+The original reranker model is unknown (its code was never saved to disk — the same pattern as the lost Phase 3 prompt and the lost relevance-judge prompt, §3.2). A lightweight, ONNX-based alternative was tested instead (`Xenova/ms-marco-MiniLM-L-6-v2` via `fastembed`'s `TextCrossEncoder`, which avoids PyTorch's heavy runtime overhead) — confirmed to be the smallest reranker `fastembed` supports.
+
+**Result: the full stack with this reranker needs 536.3 MB against Render's 512 MB free-tier limit — 24.3 MB over budget.** Breakdown of the largest contributors: the embedding model (~239 MB), the Gemini SDK used for generation (~95 MB), and the reranker itself (~68 MB).
+
+**Decision: not deployed.** Deploying this would risk an out-of-memory crash on the live production API. This is documented here as a known, measured constraint rather than deployed speculatively. Revisiting this would require either a smaller/quantized reranker not currently available through `fastembed`'s supported models, or moving off the free tier.
 
 ---
 
@@ -148,7 +154,7 @@ All three were invisible to the Phase 4 aggregate metrics, consistent with the l
 ## 6. Recommended Next Steps, Prioritized
 
 1. ~~**Patch the relevance-judge prompt** to branch on abstention (Finding 2)~~ — **Done.** See §3.2.
-2. ~~**Re-test the existing reranker's rank-1 precision** on the 6 adjacent-article questions (Finding 3)~~ — **Done, data-validated.** See §3.3. **Deployment decision still pending:** reintroducing the reranker into the live API is a pipeline change requiring explicit sign-off and end-to-end (including latency) testing before deployment.
+2. ~~**Re-test the existing reranker's rank-1 precision** on the 6 adjacent-article questions (Finding 3)~~ — **Done.** Data-validated (6/6 fixed), then deployment was investigated and found infeasible: full stack needs 536.3 MB against Render's 512 MB free-tier limit. Not deployed — see §3.3 for the full measurement.
 3. **Propose and test a grounding-prompt tightening or finer Article 17 chunking** (Finding 1) — higher-risk since it touches the production prompt/chunking validated in Phase 4; requires before/after testing on the full golden set and explicit confirmation before deployment, per this project's change-control process.
 
 ---
